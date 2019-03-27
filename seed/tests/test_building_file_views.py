@@ -115,8 +115,6 @@ class InventoryViewTests(DeleteModelsTestCase):
         result = json.loads(response.content)
 
         self.assertEqual(result['status'], 'success')
-
-
         self.assertEqual(result['message'], {'warnings': []})
         self.assertEqual(result['data']['property_view']['state']['year_built'], 1967)
         self.assertEqual(result['data']['property_view']['state']['postal_code'], '94111')
