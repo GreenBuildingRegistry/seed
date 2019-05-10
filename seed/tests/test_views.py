@@ -19,6 +19,7 @@ from seed.lib.superperms.orgs.models import OrganizationUser
 from seed.models import (
     Column,
     ColumnMapping,
+    ColumnListSetting,
     PropertyView,
     StatusLabel,
     TaxLot,
@@ -27,9 +28,8 @@ from seed.models import (
     Unit,
 )
 from seed.test_helpers.fake import (
-    FakeCycleFactory, FakeColumnFactory,
-    FakePropertyFactory, FakePropertyStateFactory,
-    FakeTaxLotStateFactory
+    FakeCycleFactory, FakeColumnFactory, FakePropertyFactory, FakePropertyStateFactory,
+    FakeTaxLotStateFactory, FakeColumnListSettingsFactory, FakeTaxLotFactory
 )
 from seed.utils.organizations import create_organization
 
@@ -490,12 +490,14 @@ class InventoryViewTests(DeleteModelsTestCase):
                                               user=self.user)
         self.property_factory = FakePropertyFactory(organization=self.org)
         self.property_state_factory = FakePropertyStateFactory(organization=self.org)
+        self.taxlot_factory = FakeTaxLotFactory(organization=self.org)
         self.taxlot_state_factory = FakeTaxLotStateFactory(organization=self.org)
         self.cycle = self.cycle_factory.get_cycle(
             start=datetime(2010, 10, 10, tzinfo=timezone.get_current_timezone()))
         self.status_label = StatusLabel.objects.create(
             name='test', super_organization=self.org
         )
+        self.column_list_factory = FakeColumnListSettingsFactory(organization=self.org)
 
         self.client.login(**user_details)
 
@@ -520,6 +522,46 @@ class InventoryViewTests(DeleteModelsTestCase):
         results = result['results'][0]
         self.assertEquals(len(result['results']), 1)
         self.assertEquals(results[column_name_mappings['address_line_1']], state.address_line_1)
+
+    def test_get_properties_profile_id(self):
+        state = self.property_state_factory.get_property_state(extra_data={"field_1": "value_1"})
+        prprty = self.property_factory.get_property()
+        PropertyView.objects.create(
+            property=prprty, cycle=self.cycle, state=state
+        )
+
+        # save all the columns in the state to the database so we can setup column list settings
+        Column.save_column_names(state)
+        # get the columnlistsetting (default) for all columns
+        columnlistsetting = self.column_list_factory.get_columnlistsettings()
+
+        column_name_mappings = {}
+        for c in Column.retrieve_all(self.org.pk, 'property'):
+            if not c['related']:
+                column_name_mappings[c['column_name']] = c['name']
+
+        response = self.client.post('/api/v2/properties/filter/?{}={}&{}={}&{}={}'.format(
+            'organization_id', self.org.pk,
+            'page', 1,
+            'per_page', 999999999
+        ), data={'profile_id': columnlistsetting.pk})
+        result = response.json()
+        results = result['results'][0]
+        self.assertEquals(len(result['results']), 1)
+        self.assertEquals(results[column_name_mappings['field_1']], state.extra_data['field_1'])
+
+        # test with queryparam
+
+        response = self.client.post('/api/v2/properties/filter/?{}={}&{}={}&{}={}&{}={}'.format(
+            'organization_id', self.org.pk,
+            'page', 1,
+            'per_page', 999999999,
+            'profile_id', columnlistsetting.pk,
+        ))
+        result = response.json()
+        results = result['results'][0]
+        self.assertEquals(len(result['results']), 1)
+        self.assertEquals(results[column_name_mappings['field_1']], state.extra_data['field_1'])
 
     def test_get_properties_cycle_id(self):
         state = self.property_state_factory.get_property_state()
@@ -972,7 +1014,7 @@ class InventoryViewTests(DeleteModelsTestCase):
             'per_page', 999999999,
             'cycle', self.cycle.pk
         ), data={'profile_id': None})
-        results = json.loads(response.content)['results']
+        results = response.json()['results']
 
         column_name_mappings_related = {}
         column_name_mappings = {}
@@ -1000,6 +1042,50 @@ class InventoryViewTests(DeleteModelsTestCase):
         # self.assertEquals(related['primary'], 'P')
         self.assertNotIn(column_name_mappings_related['extra_data_field'], related)
 
+
+    def test_get_taxlots_profile_id(self):
+        state = self.taxlot_state_factory.get_taxlot_state(extra_data={"field_1": "value_1"})
+        taxlot = self.taxlot_factory.get_taxlot()
+        TaxLotView.objects.create(
+            taxlot=taxlot, cycle=self.cycle, state=state
+        )
+
+        # save all the columns in the state to the database so we can setup column list settings
+        Column.save_column_names(state)
+        # get the columnlistsetting (default) for all columns
+        columnlistsetting = self.column_list_factory.get_columnlistsettings(
+            inventory_type=ColumnListSetting.VIEW_LIST_TAXLOT
+        )
+
+        column_name_mappings = {}
+        for c in Column.retrieve_all(self.org.pk, 'taxlot'):
+            if not c['related']:
+                column_name_mappings[c['column_name']] = c['name']
+
+        response = self.client.post('/api/v2/taxlots/filter/?{}={}&{}={}&{}={}'.format(
+            'organization_id', self.org.pk,
+            'page', 1,
+            'per_page', 999999999
+        ), data={'profile_id': columnlistsetting.pk})
+        result = response.json()
+        results = result['results'][0]
+        self.assertEquals(len(result['results']), 1)
+        self.assertEquals(results[column_name_mappings['field_1']], state.extra_data['field_1'])
+
+        # test with queryparam
+
+        response = self.client.post('/api/v2/taxlots/filter/?{}={}&{}={}&{}={}&{}={}'.format(
+            'organization_id', self.org.pk,
+            'page', 1,
+            'per_page', 999999999,
+            'profile_id', columnlistsetting.pk,
+        ))
+        result = response.json()
+        results = result['results'][0]
+        self.assertEquals(len(result['results']), 1)
+        self.assertEquals(results[column_name_mappings['field_1']], state.extra_data['field_1'])
+
+
     def test_get_taxlots_no_cycle_id(self):
         property_state = self.property_state_factory.get_property_state()
         property_property = self.property_factory.get_property()
@@ -1023,7 +1109,7 @@ class InventoryViewTests(DeleteModelsTestCase):
             'per_page', 999999999,
         )
         response = self.client.post(url, data={'profile_id': None})
-        results = json.loads(response.content)['results']
+        results = response.json()['results']
 
         self.assertEquals(len(results), 1)
 
@@ -1099,7 +1185,7 @@ class InventoryViewTests(DeleteModelsTestCase):
             'page', 1,
             'per_page', 999999999
         ), data={'profile_id': None})
-        results = json.loads(response.content)['results']
+        results = response.json()['results']
         self.assertEquals(len(results), 2)
 
         column_name_mappings_related = {}
@@ -1170,7 +1256,7 @@ class InventoryViewTests(DeleteModelsTestCase):
             'page', 1,
             'per_page', 999999999,
         ), data={'profile_id': None})
-        results = json.loads(response.content)['results']
+        results = response.json()['results']
 
         column_name_mappings_related = {}
         column_name_mappings = {}

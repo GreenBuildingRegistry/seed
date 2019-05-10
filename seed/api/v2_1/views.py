@@ -40,6 +40,7 @@ class PropertyViewFilterSet(FilterSet):
     address_line_1 = CharFilter(name="state__address_line_1", lookup_expr='contains')
     analysis_state = CharFilter(method='analysis_state_filter')
     identifier = CharFilter(method='identifier_filter')
+    # profile_id = CharFilter(method='profile_id', default=-1)
     cycle_start = DateFilter(name='cycle__start', lookup_expr='lte')
     cycle_end = DateFilter(name='cycle__end', lookup_expr='gte')
 

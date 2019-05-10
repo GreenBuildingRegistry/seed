@@ -209,6 +209,8 @@ class PropertyViewSet(GenericViewSet):
         per_page = request.query_params.get('per_page', 1)
         org_id = request.query_params.get('organization_id', None)
         cycle_id = request.query_params.get('cycle')
+        # check if there is a query paramater for the profile_id. If so, then use that one
+        profile_id = request.query_params.get('profile_id', profile_id)
         if not org_id:
             return JsonResponse(
                 {'status': 'error', 'message': 'Need to pass organization_id as query parameter'},
@@ -394,6 +396,12 @@ class PropertyViewSet(GenericViewSet):
                 profile_id = None
             else:
                 profile_id = request.data['profile_id']
+
+                # ensure that profile_id is an int
+                try:
+                    profile_id = int(profile_id)
+                except TypeError:
+                    pass
 
         return self._get_filtered_results(request, profile_id=profile_id)
 
