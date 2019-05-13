@@ -4,9 +4,10 @@
  */
 // config for protractor tests
 exports.config = {
+  chromeOnly: true,
+  directConnect: true,
   specs: [
     // 'seed/static/seed/tests/protractor-tests/adminLogin.spec.js',
-    'seed/static/seed/tests/protractor-tests/jasmineTests.spec.js',
     // 'seed/static/seed/tests/protractor-tests/adminCreateOrgs.spec.js',
     // 'seed/static/seed/tests/protractor-tests/orgPages.spec.js',
     // 'seed/static/seed/tests/protractor-tests/datasetPages.spec.js',
@@ -15,7 +16,8 @@ exports.config = {
     // 'seed/static/seed/tests/protractor-tests/datasetMapping.spec.js',
     // 'seed/static/seed/tests/protractor-tests/datasetPairing.spec.js',
     // 'seed/static/seed/tests/protractor-tests/miscellaneous.spec.js',
-    // 'seed/static/seed/tests/protractor-tests/adminLogout.spec.js'
+    // 'seed/static/seed/tests/protractor-tests/adminLogout.spec.js',
+    '**/jasmineTests.spec.js'
   ],
   baseUrl: 'http://localhost:8000/',
   rootElement: '.app',
@@ -30,11 +32,16 @@ exports.config = {
       childRename: 'Protractor sub rename',
       cycle: 'Protractor test cycle'
     }
+  },
+  jasmineNodeOpts: {
+    showColors: true
+  },
+  capabilities: {
+    browserName: 'chrome'
   }
 };
 if (process.env.TRAVIS) {
   exports.config.capabilities = {
-    browserName: 'chrome',
     'tunnel-identifier': process.env.TRAVIS_JOB_NUMBER,
     build: process.env.TRAVIS_BUILD_NUMBER
   };
