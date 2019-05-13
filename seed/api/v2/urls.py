@@ -8,7 +8,7 @@ from django.conf.urls import url, include
 from rest_framework import routers
 
 from seed.api.base.views import test_view_with_arg, TestReverseViewSet
-from seed.api.v2.views import ProgressViewSetV2
+from seed.api.v2.views import ProgressViewSetV2, CreateDefaultUser
 from seed.data_importer.views import ImportFileViewSet
 from seed.data_importer.views import (
     get_upload_details,
@@ -139,6 +139,11 @@ urlpatterns = [
         Report.as_view({'get': 'get_aggregated_property_report_data'}),
         name='aggregated_property_report_data'
     ),
+    url(
+        r'create_default_user/?$',
+        CreateDefaultUser.as_view(),
+        name='create_default_user'
+    )
     # url(
     #     r'^property/',
     #     UpdateInventoryLabelsAPIView.as_view(),
